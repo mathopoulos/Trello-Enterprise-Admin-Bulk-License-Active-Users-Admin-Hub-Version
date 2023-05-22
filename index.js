@@ -1,7 +1,10 @@
 //User Editable values
 //Below are twi values you can edit to easy customize the script. 
-const testMode = true; // set this to true or false depending on whether test mode should be used. Test mode will limit the number of users who will be given a license to 5.
-const daysSinceLastActive = 9000; // set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
+const testMode = true; //set this to true or false depending on whether test mode should be used. Test mode will limit the number of users who will be given a license to 5.
+const daysSinceLastActive = 9000; //set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
+
+// set the batch count to be retrieved in each batch. The default value is 5.
+const batchCount = 10;
 
 //--Above this line is the code to be edited by the user----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const request = require('request');
@@ -15,7 +18,7 @@ const headers = { 'Accept': 'application/json' };
 let membersAssigned = 0;
 
 function processNextBatch() {
-  const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=5`;
+  const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}`;
 
   request.get({
     url: getManagedMembersUrl,
