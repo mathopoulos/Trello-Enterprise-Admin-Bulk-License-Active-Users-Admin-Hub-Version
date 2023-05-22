@@ -4,6 +4,7 @@ const testMode = true; // set this to true or false depending on whether test mo
 const daysSinceLastActive = 9000; // set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
 
 //--Above this line is the code to be edited by the user----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 const request = require('request');
 const moment = require('moment');
 
