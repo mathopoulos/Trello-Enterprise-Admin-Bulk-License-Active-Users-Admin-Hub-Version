@@ -8,36 +8,32 @@ const batchCount = 10;
 const request = require('request');
 const moment = require('moment');
 
-const apiKey = '429c1ced3c5f0f8a17989bbcc0c38d18';
-const apiToken = 'ATTAe543a117a2db5811874a4c4f7e4fd115d1a5bfce6c92e8ae9e9812c1340c04c2FDB1A17D';
-const enterpriseId = '5ed6a066bb3d8211458f038b';
+const apiKey = 'YOURAPIKEY';
+const apiToken = 'YOURAPITOKEN';
+const enterpriseId = 'YOURENTERPRISEID';
 const headers = { 'Accept': 'application/json' };
 
 let membersAssigned = 0;
-
+let lastMemberId = 1;
 function processNextBatch() {
-  const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}`;
-
+  const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}&startIndex=${parseInt(lastMemberId)}`;
   request.get({
     url: getManagedMembersUrl,
     headers: headers,
     json: true
   }, (error, response, body) => {
+    console.log(body);
     const membersResponse = body;
     console.log(`Pulled our batch of ${membersResponse.length} members. Starting to give them Enterprise seats now...`);
-
     if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
       console.log("No more members to process");
       return;
     }
-
     membersResponse.forEach((member) => {
       const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
-
       if (daysActive <= daysSinceLastActive) {
         const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
         const data = { memberId: member.id };
-
         request.put({
           url: giveEnterpriseSeatUrl,
           headers: headers,
@@ -50,10 +46,9 @@ function processNextBatch() {
       } else {
         console.log(`Failed to assign enterprise seat to member ${member.username}`);
       }
+      lastMemberId = member.id;
     });
-
     setTimeout(processNextBatch, 5000);
   });
 }
-
 processNextBatch();
