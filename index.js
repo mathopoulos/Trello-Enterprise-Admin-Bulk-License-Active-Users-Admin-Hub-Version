@@ -1,7 +1,6 @@
 //User Editable values
 //Below are twi values you can edit to easy customize the script. 
-const testMode = true; //set this to true or false depending on whether test mode should be used. Test mode will limit the number of users who will be given a license to 5.
-const daysSinceLastActive = 9000; //set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
+const daysSinceLastActive = 90; //set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
 
 // set the batch count to be retrieved in each batch. The default value is 5.
 const batchCount = 10;
