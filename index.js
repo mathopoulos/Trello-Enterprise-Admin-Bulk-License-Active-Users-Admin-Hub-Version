@@ -18,7 +18,7 @@ const headers = { 'Accept': 'application/json' };
 let membersAssigned = 0;
 
 function processNextBatch() {
-  const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}`;
+  const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}`;
 
   request.get({
     url: getManagedMembersUrl,
@@ -47,10 +47,10 @@ function processNextBatch() {
         }, (error, response, body) => {
           const licensedResponse = JSON.parse(body);
           membersAssigned += 1;
-          console.log(`Gave an Enterprise Seat to member: ${member.id}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
+          console.log(`Gave an Enterprise Seat to member: ${member.username}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
         });
       } else {
-        console.log(`Failed to assign enterprise seat to member ${member.id}`);
+        console.log(`Failed to assign enterprise seat to member ${member.username}`);
       }
     });
 
