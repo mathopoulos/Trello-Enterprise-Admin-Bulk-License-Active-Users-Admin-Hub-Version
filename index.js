@@ -2,11 +2,14 @@
 //Below are twi values you can edit to easy customize the script. 
 const daysSinceLastActive = 90; //set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
 // set the batch count to be retrieved in each batch. The default value is 5.
-const batchCount = 10;
+const batchCount = 3;
 
 //--Above this line is the code to be edited by the user----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const request = require('request');
 const moment = require('moment');
+const process = require('process');
+
+
 
 const apiKey = 'YOURAPIKEY';
 const apiToken = 'YOURAPITOKEN';
@@ -14,16 +17,18 @@ const enterpriseId = 'YOURENTERPRISEID';
 const headers = { 'Accept': 'application/json' };
 
 let membersAssigned = 0;
-let lastMemberId = 1;
+let membersSkipped = 0;
+
 function processNextBatch() {
-  const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}&startIndex=${parseInt(lastMemberId)}`;
+  const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  console.log(getManagedMembersUrl);
   request.get({
     url: getManagedMembersUrl,
     headers: headers,
     json: true
   }, (error, response, body) => {
-    console.log(body);
     const membersResponse = body;
+    console.log(membersResponse);
     console.log(`Pulled our batch of ${membersResponse.length} members. Starting to give them Enterprise seats now...`);
     if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
       console.log("No more members to process");
@@ -44,9 +49,13 @@ function processNextBatch() {
           console.log(`Gave an Enterprise Seat to member: ${member.username}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
         });
       } else {
-        console.log(`Failed to assign enterprise seat to member ${member.username}`);
+        console.log(`${member.username} has not been active so we did not give them an Enterprise Seat.`);
+        membersSkipped +=1;
+        if(membersSkipped == batchCount){
+      console.log("No more active Trell Free Members to give seats too.");
+      process.exit();
+}
       }
-      lastMemberId = member.id;
     });
     setTimeout(processNextBatch, 5000);
   });
