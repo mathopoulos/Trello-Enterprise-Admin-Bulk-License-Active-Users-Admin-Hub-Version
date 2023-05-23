@@ -22,7 +22,7 @@ let lastMemberIndex = 0;
 
 function processNextBatch() {
   let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
-  if (membersSkipped === batchCount) {
+  if (membersSkipped > 0) {
     getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
     membersSkipped=0;
   };
@@ -57,7 +57,7 @@ function processNextBatch() {
         membersSkipped +=1;
       }
     });
-    lastMemberIndex += membersResponse.length;
+    lastMemberIndex += membersSkipped + 1;
     setTimeout(processNextBatch, 5000);
   });
 }
