@@ -18,9 +18,15 @@ const headers = { 'Accept': 'application/json' };
 
 let membersAssigned = 0;
 let membersSkipped = 0;
+let lastMemberIndex = 0; 
 
 function processNextBatch() {
-  const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  if (membersSkipped === batchCount) {
+    getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
+    membersSkipped=0;
+  };
+    
   console.log(getManagedMembersUrl);
   request.get({
     url: getManagedMembersUrl,
@@ -51,12 +57,10 @@ function processNextBatch() {
       } else {
         console.log(`${member.username} has not been active so we did not give them an Enterprise Seat.`);
         membersSkipped +=1;
-        if(membersSkipped == batchCount){
-      console.log("No more active Trell Free Members to give seats too.");
-      process.exit();
-}
       }
     });
+    console.log(lastMemberIndex);
+    lastMemberIndex += membersResponse.length;
     setTimeout(processNextBatch, 5000);
   });
 }
