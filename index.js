@@ -1,15 +1,19 @@
 //User Editable values
 //Below are twi values you can edit to easy customize the script. 
+// customize the behavior of the scheduler through variables
+const runOnlyOnce = true; // set to true to run the script one time only and then exit
+
+const intervalDays = 30; // set the number of days between script runs if runOnlyOnce is false
+
 const daysSinceLastActive = 90; //set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
 // set the batch count to be retrieved in each batch. The default value is 5.
 const batchCount = 3;
+
 
 //--Above this line is the code to be edited by the user----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const request = require('request');
 const moment = require('moment');
 const process = require('process');
-
-
 
 const apiKey = 'YOURAPIKEY';
 const apiToken = 'YOURAPITOKEN';
@@ -61,4 +65,18 @@ function processNextBatch() {
     setTimeout(processNextBatch, 5000);
   });
 }
-processNextBatch();
+
+// run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
+if (runOnlyOnce) {
+  console.log('Running script one time only');
+  processNextBatch();
+  process.exit(0);
+} else {
+  console.log(`Running script automatically every ${intervalDays} days`);
+  cron.schedule(`0 0 1 */${intervalDays} * *`, () => {
+    console.log(`Running script automatically every ${intervalDays} days`);
+    processNextBatch();
+  });
+  // run the job once on startup
+  processNextBatch();
+}
