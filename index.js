@@ -32,7 +32,7 @@ let membersSkipped = 0;
 let lastMemberIndex = 0; 
 
 function processNextBatch() {
-  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
   if (membersSkipped > 0) {
     getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
     membersSkipped=0;
@@ -51,7 +51,7 @@ function processNextBatch() {
     }
     membersResponse.forEach((member) => {
       const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
-      if (daysActive <= daysSinceLastActive) {
+      if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) {
         const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
         const data = { memberId: member.id };
         request.put({
