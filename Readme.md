@@ -1,4 +1,5 @@
-Trello Enterprise Bulk Licensing Script
+**Trello Enterprise Bulk Licensing Script
+**
 
 This is an open source script to help you bulk managed your Trello users using the Trello API. Using this script you can give Enterprise seats to Free Managed Members active in the last X days (example - 90 days). You can customize how you define active.
 
