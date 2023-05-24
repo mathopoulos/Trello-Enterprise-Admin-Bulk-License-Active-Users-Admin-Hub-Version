@@ -4,5 +4,6 @@ This is an open source script to help you bulk managed your Trello users using t
 
 For more details on how exactly to use this script, see this video below: 
 
+
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/XBQXbzUa5qE/0.jpg)](https://www.youtube.com/watch?v=XBQXbzUa5qE) 
 
