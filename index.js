@@ -9,6 +9,8 @@ const daysSinceLastActive = 90; //set this to the maximum number of days since l
 // set the batch count to be retrieved in each batch. The default value is 5.
 const batchCount = 5;
 
+const testRun = true // if this value is set to true, the script will simulate giving seats to active members but will not actually give them seats. Set to false if you would like to actually give users enterprise seats. 
+
 
 //------------------------------------------------------------------------------------------------------------
 //REQUIRED authintication credentials
@@ -46,12 +48,15 @@ function processNextBatch() {
     const membersResponse = body;
     console.log(`Pulled our batch of ${membersResponse.length} members. Starting to give them Enterprise seats now...`);
     if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
-      console.log("No more members to process, All done!");
+      if (testRun === false) {
+        console.log(`No more members to process, All done! Enterprise seats were given to ${membersAssigned}`);} 
+      else {console.log(`No more members to process, Test all done! Enterprise seats would have been given to ${membersAssigned} if not in test mode`)};
       return;
     }
     membersResponse.forEach((member) => {
       const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
-      if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) {
+      if (testRun === false) {
+      if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
         const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
         const data = { memberId: member.id };
         request.put({
@@ -64,15 +69,24 @@ function processNextBatch() {
           const licensedResponse = JSON.parse(body);
           membersAssigned += 1;
           console.log(`Gave an Enterprise Seat to member: ${member.username}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
-        });
+      });
       } else {
         console.log(`${member.username} has not been active so we did not give them an Enterprise Seat.`);
         membersSkipped +=1;
+      }}; 
+    if (testRun === true) {
+      if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
+        const data = { memberId: member.id };
+        console.log(`[TEST MODE] Gave an Enterprise Seat to member: ${member.username}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
+
+      } else {
+        console.log(`[TEST MODE] ${member.username} has not been active so we did not give them an Enterprise Seat.`);
+        membersSkipped +=1;
       }
-    });
+    }});
     lastMemberIndex += membersSkipped + 1;
     setTimeout(processNextBatch, 5000);
-  });
+});
 }
 
 // run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
