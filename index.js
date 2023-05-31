@@ -63,10 +63,10 @@ function processNextBatch() {
           //console.log(member.username);
           const licensedResponse = JSON.parse(body);
           membersAssigned += 1;
-          console.log(`Gave an Enterprise Seat to member: ${member.username}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
+          console.log(`Gave an Enterprise Seat to member: ${member.username}. Have now assigned a total of ${membersAssigned} Enterprise seats. `);
         });
       } else {
-        console.log(`${member.username} has not been active so we did not give them an Enterprise Seat.`);
+        console.log(`${member.username} has not been active so we did not give them an Enterprise Seat. `);
         membersSkipped +=1;
       }
     });
