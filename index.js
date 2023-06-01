@@ -30,15 +30,17 @@ const moment = require('moment');
 const process = require('process');
 const fs = require('fs');
 const parse = require('csv-parse');
+const timestamp = moment().format("YYYY-MM-DD-HHmmss")
 
 let membersAssigned = 0;
 let membersSkipped = 0;
 let lastMemberIndex = 0; 
 
+
 const csvHeaders = [['Member Full Name', 'Days Since Last Active', 'Last Active', 'Enterprise Seat given']];
-fs.writeFileSync('member_report.csv', '');
+fs.writeFileSync(`member_report_${timestamp}.csv`, '');
 csvHeaders.forEach((header) => {
-    fs.appendFileSync('member_report.csv', header.join(', ') + '\r\n');
+    fs.appendFileSync(`member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
 });
 
 function processNextBatch() {
@@ -57,8 +59,8 @@ function processNextBatch() {
     console.log(`Pulled our batch of ${membersResponse.length} members. Starting to give them Enterprise seats now...`);
     if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
       if (testRun === false) {
-        console.log(`No more members to process, All done! . Enterprise seats were given to ${membersAssigned}. See member_report.csv for details on which members were given seats.`);} 
-      else {console.log(`No more members to process, Test all done! Enterprise seats would have been given to ${membersAssigned} if not in test mode. See member_report.csv for details on which members would have been given enterprise seats.`)};
+        console.log(`No more members to process, All done! Enterprise seats were given to ${membersAssigned}`);} 
+      else {console.log(`No more members to process, Test all done! Enterprise seats would have been given to ${membersAssigned} if not in test mode`)};
       return;
     }
     membersResponse.forEach((member) => {
@@ -77,12 +79,12 @@ function processNextBatch() {
           const licensedResponse = JSON.parse(body);
           membersAssigned += 1;
           const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
-fs.appendFileSync('member_report.csv', rowData.join(', ') + '\r\n');
+fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
           console.log(`Gave an Enterprise Seat to member: ${member.fullName}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
       });
       } else {
         const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
-fs.appendFileSync('member_report.csv', rowData.join(', ') + '\r\n');
+fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`${member.fullName} has not been active so we did not give them an Enterprise Seat.`);
         membersSkipped +=1;
       }}; 
@@ -90,12 +92,12 @@ fs.appendFileSync('member_report.csv', rowData.join(', ') + '\r\n');
       if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
         const data = { memberId: member.id };
         const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
-fs.appendFileSync('member_report.csv', rowData.join(', ') + '\r\n');
+fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`[TEST MODE] Gave an Enterprise Seat to member: ${member.fullName}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
 
       } else {
         const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
-fs.appendFileSync('member_report.csv', rowData.join(', ') + '\r\n');
+fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`[TEST MODE] ${member.fullName} has not been active so we did not give them an Enterprise Seat.`);
         membersSkipped +=1;
       }
