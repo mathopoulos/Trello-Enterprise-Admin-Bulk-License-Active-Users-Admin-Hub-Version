@@ -57,8 +57,8 @@ function processNextBatch() {
     console.log(`Pulled our batch of ${membersResponse.length} members. Starting to give them Enterprise seats now...`);
     if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
       if (testRun === false) {
-        console.log(`No more members to process, All done! Enterprise seats were given to ${membersAssigned}`);} 
-      else {console.log(`No more members to process, Test all done! Enterprise seats would have been given to ${membersAssigned} if not in test mode`)};
+        console.log(`No more members to process, All done! . Enterprise seats were given to ${membersAssigned}. See member_report.csv for details on which members were given seats.`);} 
+      else {console.log(`No more members to process, Test all done! Enterprise seats would have been given to ${membersAssigned} if not in test mode. See member_report.csv for details on which members would have been given enterprise seats.`)};
       return;
     }
     membersResponse.forEach((member) => {
