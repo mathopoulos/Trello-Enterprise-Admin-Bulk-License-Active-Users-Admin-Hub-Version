@@ -44,7 +44,7 @@ csvHeaders.forEach((header) => {
 });
 
 function processNextBatch() {
-  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
   if (membersSkipped > 0) {
     getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
     membersSkipped=0;
@@ -67,7 +67,7 @@ function processNextBatch() {
       const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
       if (testRun === false) {
       if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
-        const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
+        const giveEnterpriseSeatUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
         const data = { memberId: member.id };
         request.put({
           url: giveEnterpriseSeatUrl,
