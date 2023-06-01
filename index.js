@@ -35,14 +35,14 @@ let membersAssigned = 0;
 let membersSkipped = 0;
 let lastMemberIndex = 0; 
 
-const csvHeaders = [['Member username', 'Days inactive', 'Enterprise Seat given']];
+const csvHeaders = [['Member Full Name', 'Days Since Last Active', 'Last Active', 'Enterprise Seat given']];
 fs.writeFileSync('member_report.csv', '');
 csvHeaders.forEach((header) => {
     fs.appendFileSync('member_report.csv', header.join(', ') + '\r\n');
 });
 
 function processNextBatch() {
-  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
   if (membersSkipped > 0) {
     getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
     membersSkipped=0;
@@ -76,27 +76,27 @@ function processNextBatch() {
           //console.log(member.username);
           const licensedResponse = JSON.parse(body);
           membersAssigned += 1;
-          const rowData = [[member.username, daysActive, 'Yes']];
+          const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
 fs.appendFileSync('member_report.csv', rowData.join(', ') + '\r\n');
-          console.log(`Gave an Enterprise Seat to member: ${member.username}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
+          console.log(`Gave an Enterprise Seat to member: ${member.fullName}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
       });
       } else {
-        const rowData = [[member.username, daysActive, 'No']];
+        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
 fs.appendFileSync('member_report.csv', rowData.join(', ') + '\r\n');
-        console.log(`${member.username} has not been active so we did not give them an Enterprise Seat.`);
+        console.log(`${member.fullName} has not been active so we did not give them an Enterprise Seat.`);
         membersSkipped +=1;
       }}; 
     if (testRun === true) {
       if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
         const data = { memberId: member.id };
-        const rowData = [[member.username, daysActive, 'Yes']];
+        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
 fs.appendFileSync('member_report.csv', rowData.join(', ') + '\r\n');
-        console.log(`[TEST MODE] Gave an Enterprise Seat to member: ${member.username}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
+        console.log(`[TEST MODE] Gave an Enterprise Seat to member: ${member.fullName}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
 
       } else {
-        const rowData = [[member.username, daysActive, 'No']];
+        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
 fs.appendFileSync('member_report.csv', rowData.join(', ') + '\r\n');
-        console.log(`[TEST MODE] ${member.username} has not been active so we did not give them an Enterprise Seat.`);
+        console.log(`[TEST MODE] ${member.fullName} has not been active so we did not give them an Enterprise Seat.`);
         membersSkipped +=1;
       }
     }});
