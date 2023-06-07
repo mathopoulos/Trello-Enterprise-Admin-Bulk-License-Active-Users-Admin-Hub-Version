@@ -37,14 +37,14 @@ let membersSkipped = 0;
 let lastMemberIndex = 0; 
 
 
-const csvHeaders = [['Member Full Name', 'Days Since Last Active', 'Last Active', 'Enterprise Seat given']];
+const csvHeaders = [['Member Email', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Enterprise Seat given']];
 fs.writeFileSync(`member_report_${timestamp}.csv`, '');
 csvHeaders.forEach((header) => {
     fs.appendFileSync(`member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
 });
 
 function processNextBatch() {
-  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
   if (membersSkipped > 0) {
     getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
     membersSkipped=0;
@@ -78,12 +78,12 @@ function processNextBatch() {
           //console.log(member.username);
           const licensedResponse = JSON.parse(body);
           membersAssigned += 1;
-          const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
+          const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
           console.log(`Gave an Enterprise Seat to member: ${member.fullName}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
       });
       } else {
-        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
+        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'No']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`${member.fullName} has not been active so we did not give them an Enterprise Seat.`);
         membersSkipped +=1;
@@ -91,12 +91,12 @@ fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n')
     if (testRun === true) {
       if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
         const data = { memberId: member.id };
-        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
+        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`[TEST MODE] Gave an Enterprise Seat to member: ${member.fullName}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
 
       } else {
-        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
+        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'No']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`[TEST MODE] ${member.fullName} has not been active so we did not give them an Enterprise Seat.`);
         membersSkipped +=1;
@@ -121,3 +121,4 @@ if (runOnlyOnce) {
   // run the job once on startup
   processNextBatch();
 }
+
