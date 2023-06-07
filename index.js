@@ -63,7 +63,10 @@ function processNextBatch() {
       else {console.log(`No more members to process, Test all done! Enterprise seats would have been given to ${membersAssigned} if not in test mode`)};
       return;
     }
+    const processedEmails = new Set();
     membersResponse.forEach((member) => {
+      if (!processedEmails.has(member.memberEmail)) {
+        processedEmails.add(member.memberEmail);
       const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
       if (testRun === false) {
       if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
@@ -101,7 +104,7 @@ fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n')
         console.log(`[TEST MODE] ${member.fullName} has not been active so we did not give them an Enterprise Seat.`);
         membersSkipped +=1;
       }
-    }});
+  }}});
     lastMemberIndex += membersSkipped + 1;
     setTimeout(processNextBatch, 5000);
 });
@@ -121,4 +124,3 @@ if (runOnlyOnce) {
   // run the job once on startup
   processNextBatch();
 }
-
