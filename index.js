@@ -1,4 +1,4 @@
-/------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------
 //User Editable Configurable Value
 //Below are four variables you can edit to easily customize the script.
 const runOnlyOnce = true; // set to true to run the script one time only and then exit
@@ -31,6 +31,95 @@ const process = require('process');
 const fs = require('fs');
 const parse = require('csv-parse');
 const timestamp = moment().format("YYYY-MM-DD-HHmmss")
+
+
+function putTogetherReport() {
+  //creates csv file where where report will be stored 
+  const csvHeaders = [['Member Email', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Enterprise Seat', 'Enterprise Seat given']];
+
+  fs.writeFileSync(`member_report_${timestamp}.csv`, '');
+
+  csvHeaders.forEach((header) => {
+    fs.appendFileSync(`member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
+  });
+
+  // API endpoint to get list of Free Members
+  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}`;
+
+  function processNextBatch(startIndex) {
+    let getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
+
+    request.get({
+      url: getNextBatchUrl,
+      headers,
+      json: true
+    }, (error, response, body) => {
+      const membersResponse = body;
+      console.log(`Pulled our batch of ${membersResponse.length} members. Adding them to the list of users...`);
+      if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
+        if (testRun === false) {
+          console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start giving active users Enterprise seats...`);
+          beginGivingSeats();
+        }
+        else { console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory`) };
+        return;
+      }
+      membersResponse.forEach((member) => {
+        const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
+        let eligible = ""
+        if (daysActive <= daysSinceLastActive) {eligible = "Yes"} else {eligible = ""};
+        const rowData = [member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, '', ''];
+        fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
+      });
+      processNextBatch(startIndex + batchCount);
+    });
+  }
+
+  processNextBatch(1);
+}
+              
+
+function beginGivingSeats() {
+  // read csv file
+  const csvData = fs.readFileSync(`member_report_${timestamp}.csv`, "utf-8");
+  // split csv rows into an array
+  const rows = csvData.trim().split(/\r?\n/);
+  // process each row
+  rows.forEach((row) => {
+    const cols = row.split(",");
+    const email = cols[0];
+    const daysActive = parseInt(cols[2]);
+    const fullName = cols[1];
+    if (cols[4] === "Yes") {
+      if (daysActive <= daysSinceLastActive) {
+        console.log(
+          `Gave an Enterprise Seat to member: ${fullName} with email ${email}`
+        );
+        if (!testRun) {
+          const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
+          request.put({
+            url: giveEnterpriseSeatUrl,
+            headers: headers,
+          });
+          row[5] = 'Yes';
+        }
+      } else {
+        console.log(
+          `Did not give an Enterprise Seat to member: ${fullName} with email ${email}, as their daysActive (${daysActive}) are greater than the maximum allowed (${daysSinceLastActive})`
+        );
+      }
+    } else {
+      console.log(
+        `Did not give not-active user an Enterprise Seat: ${fullName} with email ${email}`
+      );
+    }
+  });
+  console.log("All members processed. Enterprise seats assigned successfully.");
+}
+
+
+putTogetherReport();
+
 
 /*
 let membersAssigned = 0;
@@ -116,93 +205,6 @@ function processNextBatch() {
 }
 */
 
-
-function putTogetherReport() {
-  //creates csv file where where report will be stored 
-  const csvHeaders = [['Member Email', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Enterprise Seat', 'Enterprise Seat given']];
-
-  fs.writeFileSync(`member_report_${timestamp}.csv`, '');
-
-  csvHeaders.forEach((header) => {
-    fs.appendFileSync(`member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
-  });
-
-  // API endpoint to get list of Free Members
-  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}`;
-
-  function processNextBatch(startIndex) {
-    let getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
-
-    request.get({
-      url: getNextBatchUrl,
-      headers,
-      json: true
-    }, (error, response, body) => {
-      const membersResponse = body;
-      console.log(`Pulled our batch of ${membersResponse.length} members. Adding them to the list of users...`);
-      if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
-        if (testRun === false) {
-          console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start giving active users Enterprise seats...`);
-          beginGivingSeats();
-        }
-        else { console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory`) };
-        return;
-      }
-      membersResponse.forEach((member) => {
-        const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
-        let eligible = ""
-        if (daysActive <= daysSinceLastActive) {eligible = "Yes"} else {eligible = ""};
-        const rowData = [member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, '', ''];
-        fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-      });
-      processNextBatch(startIndex + batchCount);
-    });
-  }
-
-  processNextBatch(1);
-}
-              
-
-function beginGivingSeats() {
-    fs.createReadStream(`member_report_${timestamp}.csv`)
-        .on('error', err => console.error('Error reading file', err))
-        .pipe(parse({ delimiter: ',' }))
-        .on('error', err => console.error('Error reading data', err))
-        .on('data', function (row) {
-            const email = row[0];
-            const daysActive = parseInt(row[2]);
-            const fullName = row[1];
-            if (row[4] === 'Yes') {
-                if (daysActive <= daysSinceLastActive) {
-                    console.log(`Gave an Enterprise Seat to member: ${fullName} with email ${email}`);
-                    if (!testRun) {
-                        const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
-                        request.put({
-                            url: giveEnterpriseSeatUrl,
-                            headers: headers
-                        }, (error, response, body) => {
-                            if (error) {
-                                console.error(error);
-                            }
-                        });
-                    }
-                } else {
-                    console.log(`Did not give an Enterprise Seat to member: ${fullName} with email ${email}, as their daysActive (${daysActive}) are greater than the maximum allowed (${daysSinceLastActive})`);
-                }
-            } else {
-                console.log(`Did not give not-active user an Enterprise Seat: ${fullName} with email ${email}`);
-            }
-        })
-        .on('end', function () {
-            console.log('All members processed. Enterprise seats assigned successfully.');
-        })
-        .on('error', function (err) {
-            console.log(err);
-        });
-}
-
-
-
 // run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
  //if (runOnlyOnce) {
   //console.log('Running script one time only');
@@ -217,6 +219,3 @@ function beginGivingSeats() {
   // run the job once on startup
   //processNextBatch();
 //};
-
-putTogetherReport();
-
