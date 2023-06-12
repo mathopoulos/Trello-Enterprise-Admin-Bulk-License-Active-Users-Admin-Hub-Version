@@ -108,8 +108,8 @@ function beginGivingSeats() {
     
     const fullName = cols[2];
     const lastAccessed = cols[4];
-    const isEligible = cols[5];
-    if (daysActive < daysSinceLastActive) {
+    const isEligible = cols[5].trim();
+    if (isEligible === "Yes") {
       setTimeout(() => {
         if (!testRun) {
           const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
@@ -140,13 +140,13 @@ function beginGivingSeats() {
 
 // run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
 if (runOnlyOnce) {
-  console.log('Running script one time only.');
+  console.log('Running bulk licensing script one time only.');
   putTogetherReport();
 
 } else {
-  console.log(`Running script automatically every ${intervalDays} days`);
+  console.log(`Running bulk licensing script automatically every ${intervalDays} days`);
   cron.schedule(`0 0 1 */${intervalDays} * *`, () => {
-    console.log(`Running script automatically every ${intervalDays} days`);
+    console.log(`Running bulk licensing script automatically every ${intervalDays} days`);
     putTogetherReport();
   });
   // run the job once on startup
