@@ -70,7 +70,7 @@ function putTogetherReport() {
       membersResponse.forEach((member) => {
         const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
         let eligible = ""
-        if (daysActive < daysSinceLastActive) {eligible = "Yes"} else {eligible = "No"};
+        if (daysActive < daysSinceLastActive && !member.idEnterprisesDeactivated.length) {eligible = "Yes"} else {eligible = "No"};
         const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed,eligible];
         fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
       });
