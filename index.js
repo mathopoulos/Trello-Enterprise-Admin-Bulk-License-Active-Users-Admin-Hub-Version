@@ -3,11 +3,11 @@
 //Below are four variables you can edit to easily customize the script.
 const runOnlyOnce = true; // set to true to run the script one time only and then exit
 
-const intervalDays = 30; // set the number of days between script runs if runOnlyOnce is false
+const intervalDays = 90; // set the number of days between script runs if runOnlyOnce is false
 
 const daysSinceLastActive = 90; //set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
 // set the batch count to be retrieved in each batch. The default value is 5.
-const batchCount = 5;
+const batchCount = 100;
 
 const testRun = true // if this value is set to true, the script will simulate giving seats to active members but will not actually give them seats. Set to false if you would like to actually give users enterprise seats. 
 
@@ -31,96 +31,124 @@ const process = require('process');
 const fs = require('fs');
 const parse = require('csv-parse');
 const timestamp = moment().format("YYYY-MM-DD-HHmmss")
-
-let membersAssigned = 0;
-let membersSkipped = 0;
-let lastMemberIndex = 0; 
+let pulledBatches = 0; 
 
 
-const csvHeaders = [['Member Email', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Enterprise Seat given']];
-fs.writeFileSync(`member_report_${timestamp}.csv`, '');
-csvHeaders.forEach((header) => {
-    fs.appendFileSync(`member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
-});
 
-function processNextBatch() {
-  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
-  if (membersSkipped > 0) {
-    getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
-    membersSkipped=0;
-  };
-    
-  request.get({
-    url: getManagedMembersUrl,
-    headers: headers,
-    json: true
-  }, (error, response, body) => {
-    const membersResponse = body;
-    console.log(`Pulled our batch of ${membersResponse.length} members. Starting to give them Enterprise seats now...`);
-    if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
-      if (testRun === false) {
-        console.log(`No more members to process, All done! Enterprise seats were given to ${membersAssigned}`);} 
-      else {console.log(`No more members to process, Test all done! Enterprise seats would have been given to ${membersAssigned} if not in test mode`)};
-      return;
-    }
-    const processedEmails = new Set();
-    membersResponse.forEach((member) => {
-      if (!processedEmails.has(member.memberEmail)) {
-        processedEmails.add(member.memberEmail);
-      const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
-      if (testRun === false) {
-      if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
-        const giveEnterpriseSeatUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
-        const data = { memberId: member.id };
-        request.put({
-          url: giveEnterpriseSeatUrl,
-          headers: headers,
-          form: data
-        }, (error, response, body) => {
-          //console.log(body);
-          //console.log(member.username);
-          const licensedResponse = JSON.parse(body);
-          membersAssigned += 1;
-          const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
-fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-          console.log(`Gave an Enterprise Seat to member: ${member.fullName}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
-      });
-      } else {
-        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'No']];
-fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-        console.log(`${member.fullName} has not been active so we did not give them an Enterprise Seat.`);
-        membersSkipped +=1;
-      }}; 
-    if (testRun === true) {
-      if (daysActive <= daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
-        const data = { memberId: member.id };
-        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
-fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-        console.log(`[TEST MODE] Gave an Enterprise Seat to member: ${member.fullName}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
+function putTogetherReport() {
+  //creates csv file where where report will be stored 
+  const csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Enterprise Seat']];
 
-      } else {
-        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'No']];
-fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-        console.log(`[TEST MODE] ${member.fullName} has not been active so we did not give them an Enterprise Seat.`);
-        membersSkipped +=1;
+  fs.writeFileSync(`pre_run_member_report_${timestamp}.csv`, '');
+
+  csvHeaders.forEach((header) => {
+    fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
+  });
+
+  // API endpoint to get list of Free Members
+  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+
+  function processNextBatch(startIndex) {
+    let getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
+
+    request.get({
+      url: getNextBatchUrl,
+      headers,
+      json: true
+    }, (error, response, body) => {
+      const membersResponse = body;
+      pulledBatches = pulledBatches + 1;
+      console.log(`Pulled batch #${pulledBatches} with ${membersResponse.length} members. Adding them to the list of users...`);
+      if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
+        if (testRun === false) {
+          console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start giving active users Enterprise licenses...`);
+          beginGivingSeats();
+        }
+        else { console.log(`Test run complete! All members have been added to the report. See member_report_${timestamp}.csv in your directory`) };
+        return;
       }
-  }}});
-    lastMemberIndex += membersSkipped + 1;
-    setTimeout(processNextBatch, 5000);
-});
+      membersResponse.forEach((member) => {
+        const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
+        let eligible = ""
+        if (daysActive < daysSinceLastActive) {eligible = "Yes"} else {eligible = "No"};
+        const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed,eligible];
+        fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
+      });
+      processNextBatch(startIndex + batchCount);
+    });
+  }
+
+  processNextBatch(1);
 }
+              
+
+function beginGivingSeats() {
+  const post_timestamp = moment().format("YYYY-MM-DD-HHmmss")
+  //creates csv file where where report will be stored 
+  const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Enterprise Seat', 'Given Enterprise Seat']];
+  fs.writeFileSync(`post_run_member_report_${post_timestamp}.csv`, '');
+  
+  post_csvHeaders.forEach((header) => {
+      fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, header.join(', ') + '\r\n');
+    });
+  
+  // read pre csv file
+  const pre_csvData = fs.readFileSync(`pre_run_member_report_${timestamp}.csv`, "utf-8");
+
+
+  // split csv rows into an array
+  const pre_rows = pre_csvData.trim().split(/\r?\n/);
+
+  // process each row
+   pre_rows.forEach((pre_row, i) => {
+    const cols = pre_row.split(",");
+    const email = cols[0];
+    const memberId = cols[1].trim();
+    const daysActive = parseInt(cols[3]);
+    
+    const fullName = cols[2];
+    const lastAccessed = cols[4];
+    const isEligible = cols[5];
+    if (daysActive < daysSinceLastActive) {
+      setTimeout(() => {
+        if (!testRun) {
+          const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
+          const data = { memberId:memberId };
+           
+          request.put({
+            url: giveEnterpriseSeatUrl,
+            headers: headers,
+            form: data, 
+          }, (error, response, body) => {
+            if (!error && response.statusCode ===200) {
+              console.log(`Gave Enterprise seat to member: ${fullName} with email ${email}`);
+              const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
+              fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+            } else {
+              console.log(`There was an error giving an Enterprise seat to ${email}: ${body}`)
+            }
+          });
+        }
+      }, i * 500);
+    } else {
+      const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
+      fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+
+    }
+  });
+};
 
 // run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
 if (runOnlyOnce) {
-  console.log('Running script one time only');
-  processNextBatch();
+  console.log('Running script one time only.');
+  putTogetherReport();
 
 } else {
   console.log(`Running script automatically every ${intervalDays} days`);
   cron.schedule(`0 0 1 */${intervalDays} * *`, () => {
     console.log(`Running script automatically every ${intervalDays} days`);
-    processNextBatch();
+    putTogetherReport();
   });
   // run the job once on startup
-  processNextBatch();
+  putTogetherReport();
 }
