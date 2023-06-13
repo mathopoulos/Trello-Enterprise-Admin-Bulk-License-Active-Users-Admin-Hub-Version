@@ -46,7 +46,7 @@ function putTogetherReport() {
   });
 
   // API endpoint to get list of Free Members
-  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
 
 async function processNextBatch(startIndex) {
     return new Promise((resolve, reject) => {
@@ -116,7 +116,7 @@ async function beginGivingSeats() {
     const lastAccessed = cols[4];
     const isEligible = cols[5].trim();
     if (isEligible === "Yes") {
-        const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
+        const giveEnterpriseSeatUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
         const data = { memberId:memberId };
         request.put({
           url: giveEnterpriseSeatUrl,
