@@ -132,14 +132,17 @@ async function beginGivingSeats() {
           }
           resolve();
         });
-    } else {
+    } else if (email === "Member Email") {
+      resolve();
+    }
+    else {
       const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
       fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
       resolve();
     }
   }));
 
-  return Promise.all(apiRequests).then(() => {console.log(`All  giving Enterprise seats to active users! You can find the results in post_run_member_report.`)});
+  return Promise.all(apiRequests).then(() => {console.log(`All done! Gave Enterprise seats to all active users! You can find the results in post_run_member_report.`)});
 };
 
 // run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
