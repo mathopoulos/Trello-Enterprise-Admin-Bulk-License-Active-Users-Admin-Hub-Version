@@ -34,7 +34,6 @@ const timestamp = moment().format("YYYY-MM-DD-HHmmss")
 let pulledBatches = 0; 
 
 
-
 function putTogetherReport() {
   //creates csv file where where report will be stored 
   const csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Enterprise Seat']];
@@ -62,11 +61,13 @@ async function processNextBatch(startIndex) {
         console.log(`Pulled batch #${pulledBatches} with ${membersResponse.length} members. Adding them to the list of users...`);
 
         if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
+          if (testRun === false) {
           console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start giving active users Enterprise licenses...`);
           
           // call beginGivingSeats here
           await beginGivingSeats();
-
+          }
+          else { console.log(`Test run complete! All members have been added to the report. See member_report_${timestamp}.csv in your directory`) };
           resolve();
           return;
         }
