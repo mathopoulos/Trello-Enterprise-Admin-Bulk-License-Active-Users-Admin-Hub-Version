@@ -35,7 +35,7 @@ let pulledBatches = 0;
 
 function putTogetherReport() {
   //creates csv file where where report will be stored 
-  const csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Enterprise Seat']];
+  const csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Currently Deactivated', 'Eligible For Enterprise Seat']];
 
   fs.writeFileSync(`pre_run_member_report_${timestamp}.csv`, '');
 
@@ -44,7 +44,7 @@ function putTogetherReport() {
   });
 
   // API endpoint to get list of Free Members
-  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
 
 async function processNextBatch(startIndex) {
     return new Promise((resolve, reject) => {
@@ -74,8 +74,10 @@ async function processNextBatch(startIndex) {
         membersResponse.forEach((member) => {
           const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
           let eligible = ""
-          if (daysActive < daysSinceLastActive && !member.idEnterprisesDeactivated.length) {eligible = "Yes"} else {eligible = "No"};
-          const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed,eligible];
+          let deactivated = ""
+          if (member.idEnterprisesDeactivated.length > 0) {deactivated ="True"} else (deactivated ="False")
+          if (daysActive < daysSinceLastActive) {eligible = "Yes"} else {eligible = "No"};
+          const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed,deactivated, eligible];
           fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         });      
 
@@ -117,10 +119,11 @@ async function beginGivingSeats() {
     const daysActive = parseInt(cols[3]);
     const fullName = cols[2];
     const lastAccessed = cols[4];
-    const isEligible = cols[5].trim();
-    if (isEligible === "Yes") {
+    const isDeactivated = cols[5].trim();
+    const isEligible = cols[6].trim();
+    if (isEligible === "Yes" && isDeactivated ==="False") {
         setTimeout(() => {
-        const giveEnterpriseSeatUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
+        const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
         const data = { memberId:memberId };
         request.put({
           url: giveEnterpriseSeatUrl,
@@ -129,6 +132,27 @@ async function beginGivingSeats() {
         }, (error, response, body) => {
           if (!error && response.statusCode ===200) {
             console.log(`Gave Enterprise seat to member: ${fullName} with email ${email}`);
+            const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
+            fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+          } else {
+            console.log(`There was an error giving an Enterprise seat to ${email}: ${body}`)
+          }
+          resolve();
+        });
+      }, delayCount * delay);
+      delayCount++;
+    } else if (isEligible === "Yes" && isDeactivated ==="True") {
+        setTimeout(() => {
+        const reActivateUser = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/deactivated?key=${apiKey}&token=${apiToken}&value=false`;
+        const data = { memberId:memberId };
+        request.put({
+          url: reActivateUser,
+          headers: headers,
+          form: data, 
+        }, (error, response, body) => {
+          if (!error && response.statusCode ===200) {
+            console.log(reActivateUser);
+            console.log(`Reactivated and gave seat to member: ${fullName} with email ${email}`);
             const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
             fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
           } else {
@@ -165,4 +189,3 @@ if (runOnlyOnce) {
   // run the job once on startup
   putTogetherReport();
 }
-
