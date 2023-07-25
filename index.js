@@ -6,8 +6,8 @@ const runOnlyOnce = true; // set to true to run the script one time only and the
 const intervalDays = 90; // set the number of days between script runs if runOnlyOnce is false
 
 const daysSinceLastActive = 90; //set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
-// set the batch count to be retrieved in each batch. The default value is 5.
-const batchCount = 100;
+// set the batch count to be retrieved in each batch. The default value is 50.
+const batchCount = 50;
 
 const testRun = true // if this value is set to true, the script will simulate giving seats to active members but will not actually give them seats. Set to false if you would like to actually give users enterprise seats. 
 
@@ -31,6 +31,28 @@ const fs = require('fs');
 const parse = require('csv-parse');
 const timestamp = moment().format("YYYY-MM-DD-HHmmss")
 let pulledBatches = 0; 
+const MAX_RETRIES = 3
+const RETRY_DELAY = 1000; 
+
+// Helper function to handle retries
+async function withRetry(fn, maxRetries) {
+  let attempts = 0;
+  let error;
+
+  while (attempts <= maxRetries) {
+      try {
+          return await fn();
+      } catch (err) {
+          error = err;
+          attempts++;
+          if (attempts <= maxRetries) {
+              await new Promise(res => setTimeout(res, RETRY_DELAY));
+          }
+      }
+  }
+
+  throw error;
+}
 
 
 function putTogetherReport() {
@@ -106,86 +128,104 @@ processNextBatch(1);
               
 
 async function beginGivingSeats() {
-  const post_timestamp = moment().format("YYYY-MM-DD-HHmmss")
-  //creates csv file where where report will be stored 
+  const post_timestamp = moment().format("YYYY-MM-DD-HHmmss");
+  
   const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Enterprise Seat', 'Given Enterprise Seat']];
-  fs.writeFileSync(`post_run_member_report_${post_timestamp}.csv`, '');
-  
-  post_csvHeaders.forEach((header) => {
-      fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, header.join(', ') + '\r\n');
-    });
-  
-  // read pre csv file
-  const pre_csvData = fs.readFileSync(`pre_run_member_report_${timestamp}.csv`, "utf-8");
+  let pre_rows; 
+  try {
+      fs.writeFileSync(`post_run_member_report_${post_timestamp}.csv`, '');
+      post_csvHeaders.forEach((header) => {
+          fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, header.join(', ') + '\r\n');
+      });
+      
+      const pre_csvData = fs.readFileSync(`pre_run_member_report_${timestamp}.csv`, "utf-8");
+      pre_rows = pre_csvData.trim().split(/\r?\n/);
+  } catch (err) {
+      console.error('Error while reading or writing CSV:', err);
+      throw err;
+  }
 
-  // split csv rows into an array
-  const pre_rows = pre_csvData.trim().split(/\r?\n/);
+  const apiRequests = pre_rows.map((pre_row, i) => {
+      return new Promise(async (resolve, reject) => {
+          const cols = pre_row.split(",");
+          const email = cols[0];
+          const memberId = cols[1].trim();
+          const daysActive = parseInt(cols[3]);
+          const fullName = cols[2];
+          const lastAccessed = cols[4];
+          const isDeactivated = cols[5].trim();
+          const isEligible = cols[6].trim();
 
-  const delay = 1000;
-  let delayCount = 0;
-  
-  // process each row
-  const apiRequests = pre_rows.map((pre_row, i) => new Promise((resolve, reject) => {
-    const cols = pre_row.split(",");
-    const email = cols[0];
-    const memberId = cols[1].trim();
-    const daysActive = parseInt(cols[3]);
-    const fullName = cols[2];
-    const lastAccessed = cols[4];
-    const isDeactivated = cols[5].trim();
-    const isEligible = cols[6].trim();
-    if (isEligible === "Yes" && isDeactivated ==="False") {
-        setTimeout(() => {
-        const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
-        const data = { memberId:memberId };
-        request.put({
-          url: giveEnterpriseSeatUrl,
-          headers: headers,
-          form: data, 
-        }, (error, response, body) => {
-          if (!error && response.statusCode ===200) {
-            console.log(`Gave Enterprise seat to member: ${fullName} with email ${email}`);
-            const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
-            fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
-          } else {
-            console.log(`There was an error giving an Enterprise seat to ${email}: ${body}`)
+          const requestFn = () => new Promise((resolve, reject) => {
+              if (isEligible === "Yes" && isDeactivated === "False") {
+                  const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
+                  const data = { memberId: memberId };
+
+                  request.put({
+                      url: giveEnterpriseSeatUrl,
+                      headers: headers,
+                      form: data,
+                  }, (error, response, body) => {
+                      if (error) {
+                          return reject(error);
+                      }
+
+                      if (response.statusCode === 200) {
+                          const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
+                          fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+                          console.log(`Gave Enterprise seat to member: ${fullName} with email ${email}`)
+                          resolve();
+                      } else {
+                          reject(new Error(body || `HTTP Error: ${response.statusCode}`));
+                      }
+                  });
+              } else if (isEligible === "Yes" && isDeactivated === "True") {
+                  const reActivateUser = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/deactivated?key=${apiKey}&token=${apiToken}&value=false`;
+                  const data = { memberId: memberId };
+
+                  request.put({
+                      url: reActivateUser,
+                      headers: headers,
+                      form: data,
+                  }, (error, response, body) => {
+                      if (error) {
+                          return reject(error);
+                      }
+
+                      if (response.statusCode === 200) {
+                          const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
+                          fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+                          console.log(`Reactivated and gave seat to member: ${fullName} with email ${email}`);
+                          resolve();
+                      } else {
+                          reject(new Error(body || `HTTP Error: ${response.statusCode}`));
+                      }
+                  });
+              } else if (email === "Member Email") {
+                  resolve();
+              } else {
+                  const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
+                  fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+                  resolve();
+              }
+          });
+
+          try {
+              await withRetry(requestFn, MAX_RETRIES);
+          } catch (err) {
+              console.error(`Failed to process ${email} after ${MAX_RETRIES} retries. Error: ${err.message}`);
           }
-          resolve();
-        });
-      }, delayCount * delay);
-      delayCount++;
-    } else if (isEligible === "Yes" && isDeactivated ==="True") {
-        setTimeout(() => {
-        const reActivateUser = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/deactivated?key=${apiKey}&token=${apiToken}&value=false`;
-        const data = { memberId:memberId };
-        request.put({
-          url: reActivateUser,
-          headers: headers,
-          form: data, 
-        }, (error, response, body) => {
-          if (!error && response.statusCode ===200) {
-            console.log(reActivateUser);
-            console.log(`Reactivated and gave seat to member: ${fullName} with email ${email}`);
-            const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
-            fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
-          } else {
-            console.log(`There was an error giving an Enterprise seat to ${email}: ${body}`)
-          }
-          resolve();
-        });
-      }, delayCount * delay);
-      delayCount++;
-    } else if (email === "Member Email") {
-      resolve();
-    }
-    else {
-      const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
-      fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
-      resolve();
-  } 
-  }));
 
-  return Promise.all(apiRequests).then(() => {console.log(`All done! Gave Enterprise seats to all active users! You can find the results in post_run_member_report.`)});
+          resolve();
+      });
+  });
+
+  try {
+      await Promise.all(apiRequests);
+      console.log(`All done! Gave Enterprise seats to all active users! You can find the results in post_run_member_report_${post_timestamp}.csv.`);
+  } catch (err) {
+      console.error('Some errors occurred while processing members:', err);
+  }
 };
 
 // run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
