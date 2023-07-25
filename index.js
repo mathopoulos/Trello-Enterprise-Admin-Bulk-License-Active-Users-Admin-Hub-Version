@@ -5,9 +5,9 @@ const runOnlyOnce = true; // set to true to run the script one time only and the
 
 const intervalDays = 90; // set the number of days between script runs if runOnlyOnce is false
 
-const daysSinceLastActive = 90; //set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
-// set the batch count to be retrieved in each batch. The default value is 50.
-const batchCount = 50;
+const daysSinceLastActive = 90; //seats will be given to users who have been since the last X days. 
+
+const batchCount = 50; // the number of users that will be retrieved with each call. The default value is 50. We recommend not increasing this number (to avoid rate limiting)
 
 const testRun = true // if this value is set to true, the script will simulate giving seats to active members but will not actually give them seats. Set to false if you would like to actually give users enterprise seats. 
 
@@ -34,7 +34,7 @@ let pulledBatches = 0;
 const MAX_RETRIES = 3
 const RETRY_DELAY = 1000; 
 
-// Helper function to handle retries
+// Helper function to handle retries. Set to retry 3 times with a 1000 ms delay between retries. 
 async function withRetry(fn, maxRetries) {
   let attempts = 0;
   let error;
@@ -54,20 +54,19 @@ async function withRetry(fn, maxRetries) {
   throw error;
 }
 
-
+// Function to put together pre-report and then kickoff functions to give/reactivate eligiable users. 
 function putTogetherReport() {
-  //creates csv file where where report will be stored 
+  //creates csv file where where report will be test/pre run user report will be stored 
   const csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Currently Deactivated', 'Eligible For Enterprise Seat']];
-
   fs.writeFileSync(`pre_run_member_report_${timestamp}.csv`, '');
-
   csvHeaders.forEach((header) => {
     fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
   });
 
   // API endpoint to get list of Free Members
-  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
 
+  // Function to pull the next set of users 
   async function processNextBatch(startIndex) {
     return new Promise(async (resolve, reject) => {
         const getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
@@ -140,7 +139,7 @@ processNextBatch(1);
 
 }
               
-
+// Function that actually gives eligiable users an enterprise seat or re-activates them. 
 async function beginGivingSeats() {
   const post_timestamp = moment().format("YYYY-MM-DD-HHmmss");
   
@@ -172,7 +171,7 @@ async function beginGivingSeats() {
 
           const requestFn = () => new Promise((resolve, reject) => {
               if (isEligible === "Yes" && isDeactivated === "False") {
-                  const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
+                  const giveEnterpriseSeatUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=true`;
                   const data = { memberId: memberId };
 
                   request.put({
@@ -194,7 +193,7 @@ async function beginGivingSeats() {
                       }
                   });
               } else if (isEligible === "Yes" && isDeactivated === "True") {
-                  const reActivateUser = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/deactivated?key=${apiKey}&token=${apiToken}&value=false`;
+                  const reActivateUser = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${memberId}/deactivated?key=${apiKey}&token=${apiToken}&value=false`;
                   const data = { memberId: memberId };
 
                   request.put({
