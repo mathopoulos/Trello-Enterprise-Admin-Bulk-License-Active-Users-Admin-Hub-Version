@@ -1,6 +1,6 @@
 ## Trello Enterprise Bulk Licensing Script
 
-This is an open source script to help you bulk managed your Trello users using the Trello API. Using this script you can give Enterprise seats to Free Managed Members active in the last X days (example - 90 days). You can customize how you define active. For more details on how exactly to use this script, see this video below: 
+This is an open source script to help you bulk managed your Trello users using the Trello API. Using this script you can give Enterprise seats to Free Managed Members active in the last X days (example - 90 days) and re-activate deactivated users who have been active in the last X days. You can customize how you define active. For more details on how exactly to use this script, see this video below: 
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/XBQXbzUa5qE/0.jpg)](https://www.youtube.com/watch?v=XBQXbzUa5qE) 
 ---
@@ -16,7 +16,7 @@ In addition there are 5 customizations that the user can customize if they would
 - **runOnlyOnce** - This script can be configured to run 1x or if they user would like, run every X number of days. Set this value to true to run only once and false to run every X number of days. 
 - **IntervalDays** - If the runOnlyOnce is set to false, then how often would you like the script to run. Enter this in number of days. 
 - **daysSinceLastActive** - This variable defines how you want to define activity. By default this is set to 90 days. 
-- **batchCount** - This variable allows you to define how many users you want to give Enterprise seats at once. The default value is 100. We do not recommend going much higher than this because you may get rate limited.
+- **batchCount** - This variable allows you to define how many users you want to give Enterprise seats at once. The default value is 50. We do not recommend going much higher than this because you may get rate limited.
 
 ---
 ### Outputs
