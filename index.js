@@ -70,60 +70,74 @@ function putTogetherReport() {
 
   async function processNextBatch(startIndex) {
     return new Promise(async (resolve, reject) => {
-        let getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
+        const getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
 
-        request.get({
-            url: getNextBatchUrl,
-            headers,
-            json: true
-        }, async (error, response, body) => {
-            if (error) {
-                console.error('Network error occurred:', error);
-                return reject(error);
-            }
+        const requestFn = () => new Promise((innerResolve, innerReject) => {
+            request.get({
+                url: getNextBatchUrl,
+                headers,
+                json: true
+            }, async (error, response, body) => {
+                if (error) {
+                    return innerReject(error);
+                }
 
-            if (response.statusCode !== 200) {
-                console.error(`Received HTTP status code ${response.statusCode}:`, body);
-                return reject(new Error(`HTTP Error: ${response.statusCode}`));
-            }
+                if (response && response.statusCode !== 200) {
+                    return innerReject(new Error(body || `HTTP Error: ${response.statusCode}`));
+                }
 
-            if (!body) {
-                console.error('No body received in the response.');
-                return reject(new Error('No body received in the response.'));
-            }
+                const membersResponse = body;
+                pulledBatches = pulledBatches + 1;
+                console.log(`Pulled batch #${pulledBatches} with ${membersResponse.length} members. Adding them to the list of users...`);
 
-            const membersResponse = body;
-            pulledBatches++;
-            console.log(`Pulled batch #${pulledBatches} with ${membersResponse.length} members. Adding them to the list of users...`);
+                if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
+                    if (testRun === false) {
+                        console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start giving active users Enterprise licenses...`);
+                        
+                        await beginGivingSeats();
+                    } else {
+                        console.log(`Test run complete! All members have been added to the report. See member_report_${timestamp}.csv in your directory`);
+                    }
+                    innerResolve();
+                    return;
+                }
 
-            if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
-                console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start giving active users Enterprise licenses...`);
-                if (!testRun) await beginGivingSeats();
-                else console.log(`Test run complete! All members have been added to the report. See member_report_${timestamp}.csv in your directory`);
-                return resolve();
-            }
-
-            try {
                 membersResponse.forEach((member) => {
                     const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
-                    let eligible = daysActive < daysSinceLastActive ? "Yes" : "No";
-                    let deactivated = member.idEnterprisesDeactivated.length > 0 ? "True" : "False";
+                    let eligible = "";
+                    let deactivated = "";
+                    if (member.idEnterprisesDeactivated.length > 0) {
+                        deactivated = "True";
+                    } else {
+                        deactivated = "False";
+                    }
+                    if (daysActive < daysSinceLastActive) {
+                        eligible = "Yes";
+                    } else {
+                        eligible = "No";
+                    }
                     const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed, deactivated, eligible];
                     fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
                 });
 
                 // process next batch recursively
                 await processNextBatch(startIndex + batchCount);
-                resolve();
-            } catch (err) {
-                console.error('Error processing members:', err);
-                reject(err);
-            }
+                innerResolve();
+            });
         });
+
+        try {
+            await withRetry(requestFn, MAX_RETRIES);
+            resolve();
+        } catch (err) {
+            console.error(`Failed to process batch starting from index ${startIndex} after ${MAX_RETRIES} retries. Error: ${err.message}`);
+            reject(err);
+        }
     });
 }
 
 processNextBatch(1);
+
 }
               
 
@@ -242,3 +256,4 @@ if (runOnlyOnce) {
   // run the job once on startup
   putTogetherReport();
 }
+
