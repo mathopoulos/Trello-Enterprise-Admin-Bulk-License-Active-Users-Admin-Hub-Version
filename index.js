@@ -46,49 +46,62 @@ function putTogetherReport() {
   // API endpoint to get list of Free Members
   let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
 
-async function processNextBatch(startIndex) {
-    return new Promise((resolve, reject) => {
-      let getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
+  async function processNextBatch(startIndex) {
+    return new Promise(async (resolve, reject) => {
+        let getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
 
-      request.get({
-        url: getNextBatchUrl,
-        headers,
-        json: true
-      }, async (error, response, body) => {
-        const membersResponse = body;
-        pulledBatches = pulledBatches + 1;
-        console.log(`Pulled batch #${pulledBatches} with ${membersResponse.length} members. Adding them to the list of users...`);
+        request.get({
+            url: getNextBatchUrl,
+            headers,
+            json: true
+        }, async (error, response, body) => {
+            if (error) {
+                console.error('Network error occurred:', error);
+                return reject(error);
+            }
 
-        if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
-          if (testRun === false) {
-          console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start giving active users Enterprise licenses...`);
-          
-          // call beginGivingSeats here
-          await beginGivingSeats();
-          }
-          else { console.log(`Test run complete! All members have been added to the report. See member_report_${timestamp}.csv in your directory`) };
-          resolve();
-          return;
-        }
+            if (response.statusCode !== 200) {
+                console.error(`Received HTTP status code ${response.statusCode}:`, body);
+                return reject(new Error(`HTTP Error: ${response.statusCode}`));
+            }
 
-        membersResponse.forEach((member) => {
-          const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
-          let eligible = ""
-          let deactivated = ""
-          if (member.idEnterprisesDeactivated.length > 0) {deactivated ="True"} else (deactivated ="False")
-          if (daysActive < daysSinceLastActive) {eligible = "Yes"} else {eligible = "No"};
-          const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed,deactivated, eligible];
-          fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-        });      
+            if (!body) {
+                console.error('No body received in the response.');
+                return reject(new Error('No body received in the response.'));
+            }
 
-        // process next batch recursively
-        await processNextBatch(startIndex + batchCount);
-        resolve();
-      });
+            const membersResponse = body;
+            pulledBatches++;
+            console.log(`Pulled batch #${pulledBatches} with ${membersResponse.length} members. Adding them to the list of users...`);
+
+            if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
+                console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start giving active users Enterprise licenses...`);
+                if (!testRun) await beginGivingSeats();
+                else console.log(`Test run complete! All members have been added to the report. See member_report_${timestamp}.csv in your directory`);
+                return resolve();
+            }
+
+            try {
+                membersResponse.forEach((member) => {
+                    const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
+                    let eligible = daysActive < daysSinceLastActive ? "Yes" : "No";
+                    let deactivated = member.idEnterprisesDeactivated.length > 0 ? "True" : "False";
+                    const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed, deactivated, eligible];
+                    fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
+                });
+
+                // process next batch recursively
+                await processNextBatch(startIndex + batchCount);
+                resolve();
+            } catch (err) {
+                console.error('Error processing members:', err);
+                reject(err);
+            }
+        });
     });
-  }
+}
 
-  processNextBatch(1);
+processNextBatch(1);
 }
               
 
