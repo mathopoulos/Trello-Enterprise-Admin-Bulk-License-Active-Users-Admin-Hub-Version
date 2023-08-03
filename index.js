@@ -11,6 +11,8 @@ const batchCount = 50; // the number of users that will be retrieved with each c
 
 const testRun = true // if this value is set to true, the script will simulate giving seats to active members but will not actually give them seats. Set to false if you would like to actually give users enterprise seats. 
 
+const trelloGroupId = '' // The Trello Product Access group that if a user is in they will be given an Enterprise License/product access. 
+
 
 //------------------------------------------------------------------------------------------------------------
 //REQUIRED authintication credentials
