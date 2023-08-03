@@ -64,7 +64,7 @@ function putTogetherReport() {
   });
 
   // API endpoint to get list of Free Members
-  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,aaId,memberEmail,username,dateLastAccessed&associationTypes=managedFree&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
 
   // Function to pull the next set of users 
   async function processNextBatch(startIndex) {
@@ -115,7 +115,7 @@ function putTogetherReport() {
                     } else {
                         eligible = "No";
                     }
-                    const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed, deactivated, eligible];
+                    const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed, deactivated, eligible, member.aaId];
                     fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
                 });
 
