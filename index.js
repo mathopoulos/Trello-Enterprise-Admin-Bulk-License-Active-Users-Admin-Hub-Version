@@ -57,7 +57,7 @@ async function withRetry(fn, maxRetries) {
 // Function to put together pre-report and then kickoff functions to give/reactivate eligiable users. 
 function putTogetherReport() {
   //creates csv file where where report will be test/pre run user report will be stored 
-  const csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Currently Deactivated', 'Eligible For Enterprise Seat']];
+  const csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Currently Deactivated', 'Eligible For Enterprise Seat', 'AA ID']];
   fs.writeFileSync(`pre_run_member_report_${timestamp}.csv`, '');
   csvHeaders.forEach((header) => {
     fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
