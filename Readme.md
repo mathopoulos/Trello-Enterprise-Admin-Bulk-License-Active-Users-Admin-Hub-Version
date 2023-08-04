@@ -4,14 +4,14 @@ This is an open source script to help you bulk managed your Trello users using t
 
 ---
 ### User Paramaters 
-There are 3 variables that the user must input for the script to work:
+There are 6 variables that the user must input for the script to work:
 - **Atlassian Admin API Key** - This is the API key used to authenticate with the Atlassian Admin API. You can generate one of these from the Admin Hub UI under the Security Tab. 
 - **Trello API Token** - This is the API token used to authenticate that the script has permission to run the needed operations against the chosen Enterprise. The API token must be tied to a user of the Enterprise with Enterprise Admin Permissions. Make sure that your API token includes write permissions. See the [Trello API documentation](https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/)
  for more details. 
 - **Trello API Key** - This is the API Key used to authenticate that the script has permission to run the needed operations against the chosen Enterprise. The API token must be tied to a user of the Enterprise with Enterprise Admin Permissions. See the [Trello API documentation](https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/)
 - **Trello Enterprise ID** - This is the ID of the Enterprise that the user would like to run the script against. See the [Trello API documentation](https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/)
-- - **Atlassian Org ID** - This is the ID of your Atlassian Org. You can retrieve this during the Atlassian Admin API key generation process noted above.
-- - **Trello Group ID** - This is the ID of the user group in Admin Hub that determines whether a user is given an Trello product access or not. You can retrive this ID by goingt to Admin Hub, navigating to the Group and then pulling the ID from the URL. 
+- **Atlassian Org ID** - This is the ID of your Atlassian Org. You can retrieve this during the Atlassian Admin API key generation process noted above.
+- **Trello Group ID** - This is the ID of the user group in Admin Hub that determines whether a user is given an Trello product access or not. You can retrive this ID by goingt to Admin Hub, navigating to the Group and then pulling the ID from the URL. 
 
  
 In addition there are 5 customizations that the user can customize if they would like: 
