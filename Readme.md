@@ -1,15 +1,18 @@
 ## Trello Enterprise Bulk Licensing Script (Admin Hub Version)
 
-This is an open source script to help you bulk managed your Trello users using the Trello API. Using this script you can give Enterprise seats to Free Managed Members active in the last X days (example - 90 days) and re-activate deactivated users who have been active in the last X days. You can customize how you define active. For more details on how exactly to use this script, see this video below: 
+This is an open source script to help you bulk managed your Trello users using the Trello & Atlassian Admin APIs. Using this script you can give Enterprise seats to Free Managed Members active in the last X days (example - 90 days) and re-activate deactivated users who have been active in the last X days. You can customize how you define active. 
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/XBQXbzUa5qE/0.jpg)](https://www.youtube.com/watch?v=XBQXbzUa5qE) 
 ---
 ### User Paramaters 
 There are 3 variables that the user must input for the script to work:
-- **API Token** - This is the API token used to authenticate that the script has permission to run the needed operations against the chosen Enterprise. The API token must be tied to a user of the Enterprise with Enterprise Admin Permissions. Make sure that your API token includes write permissions. See the [Trello API documentation](https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/)
+- **Atlassian Admin API Key** - This is the API key used to authenticate with the Atlassian Admin API. You can generate one of these from the Admin Hub UI under the Security Tab. 
+- **Trello API Token** - This is the API token used to authenticate that the script has permission to run the needed operations against the chosen Enterprise. The API token must be tied to a user of the Enterprise with Enterprise Admin Permissions. Make sure that your API token includes write permissions. See the [Trello API documentation](https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/)
  for more details. 
-- **API Key** - This is the API Key used to authenticate that the script has permission to run the needed operations against the chosen Enterprise. The API token must be tied to a user of the Enterprise with Enterprise Admin Permissions. See the [Trello API documentation](https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/)
-- **Enterprise ID** - This is the ID of the Enterprise that the user would like to run the script against. See the [Trello API documentation](https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/)
+- **Trello API Key** - This is the API Key used to authenticate that the script has permission to run the needed operations against the chosen Enterprise. The API token must be tied to a user of the Enterprise with Enterprise Admin Permissions. See the [Trello API documentation](https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/)
+- **Trello Enterprise ID** - This is the ID of the Enterprise that the user would like to run the script against. See the [Trello API documentation](https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/)
+- - **Atlassian Org ID** - This is the ID of your Atlassian Org. You can retrieve this during the Atlassian Admin API key generation process noted above.
+- - **Trello Group ID** - This is the ID of the user group in Admin Hub that determines whether a user is given an Trello product access or not. You can retrive this ID by goingt to Admin Hub, navigating to the Group and then pulling the ID from the URL. 
+
  
 In addition there are 5 customizations that the user can customize if they would like: 
 - **testRun** - This script has a testRun mode. When testRun is set to true, the script will simulate giving Enterprise Seats and give you a pre_run csv report but will not actually give any users Enterprise Seats. When testRun is set to false, it will actually give enterprise seats to those users meet your activity paramater (see below).
